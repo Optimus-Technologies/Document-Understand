@@ -49,13 +49,13 @@ async def chat_with_data(session_id: int, followup_id: int, query: str, document
 
         #Making the chat history compactible with the model
         ai_chat_history = []
-        # for usr_message, ai_response in chat_history:
-        #     ai_chat_history.append(model.HumanMessage(content=usr_message))
-        #     ai_chat_history.append(model.AIMessage(content=ai_response))
-
         for usr_message, ai_response in chat_history:
-             ai_chat_history.append({"role": "user", "content": usr_message})
-             ai_chat_history.append({"role": "user", "content": ai_response})
+            ai_chat_history.append(model.HumanMessage(content=usr_message))
+            ai_chat_history.append(model.AIMessage(content=ai_response))
+
+        # for usr_message, ai_response in chat_history:
+        #      ai_chat_history.append({"role": "user", "content": usr_message})
+        #      ai_chat_history.append({"role": "ai", "content": ai_response})
 
 
 
