@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, status
 import sqlite3
-import parser, model, model2
+import parser, model
 from crud import *
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.documents import Document
