@@ -1,77 +1,151 @@
-from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, AnyMessage
 import os
 from typing import List
+from langchain_core.documents import Document
+from google.generativeai import GenerativeModel, configure
 
-#Hugging Face with langchian
-os.environ["HUGGINGFACE_API_TOKEN"] = "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"
 
-model = HuggingFaceEndpoint(repo_id="mistralai/Mistral-7B-Instruct-v0.3")
 
-chatmodel = ChatHuggingFace(llm=model)
+# Initialize the Gemini client
+configure(api_key='AIzaSyAs9e2qHGqLrEg-E6hxGNueIwPwX6lq9Fk')
+model = GenerativeModel('gemini-1.5-pro')
 
-async def chat_with_model(query: str, document: str, chat_history: List[AnyMessage] = []):
-    messages = [SystemMessage(content=document)]
-    messages += chat_history
-    human_message = HumanMessage(content=query)
-    messages.append(human_message)
+prompts = {
+        "Healthcare": '''
+            You are a professional medical doctor. You are very good at extracting key information
+            from healthcare related data such as extracting patient information, medical history, 
+            and treatment plans from hospital records, insurance claims, and medical research papers without any errors.
+        ''',
+        "Agriculture": '''
+            You are a professional agricultural engineer. You are very good at extracting key information
+            from agriculture related data such as farm records, crop insurance documents, and market reports
+            to support decision- making for farmers, agricultural businesses, and policymakers.
+        ''',
+        "Finance and Banking": '''
+            You are a professional finance and banking practioner. You are very good at extracting financial information
+            from finance and banking related data such as bank statements, loan applications, and investment documents
+            to support credit scoring, risk assessment, and financial inclusion.
+        ''',
+        "Education": '''
+            You work as a  data analyst at an educational institute. You are very good at extracting key information
+            from education related data such as extractstudentinformation,academic records, and learning outcomes
+            from school databases, exam papers, and research articles to support education policy and improvement.
+        ''',
+        "Land Administration": '''
+            You work as a land economist. You are very good at extracting useful information from data related to land
+            administration for extract property information, ownership details, and transaction history from land deeds,
+            property titles, and court documents to support land reform, property rights, and urban planning.
+        ''',
+        "Receipt": '''
+            You are a very good at retrieving key information such as vendor information,
+            purchase details, payment information from receipts and invoices. 
+        '''
+    }
 
-    response = chatmodel.invoke(messages)
+async def extract_info(text: str, category: str, query: str, chat_history: str):
+    # Define prompts for each category
+    
 
-    messages.append(AIMessage(content=response.content))
-    return response
- 
+    # Choose the appropriate prompt based on the category
+    if category in prompts:
+        prompt = prompts[category]
+    else:
+        prompt = "You are a very good question and answer system\n"
 
-from groq import Groq
+    # Construct the full prompt
+    full_prompt = f'''Act as a well-trained NER model.\
+                    You are to provide the info for all that the\
+                    user need. Dont start with introducing yourself,\
+                    go straight to the point. i will tip you\
+                    $500 when you do a really exceptional job.
 
-#Using Groq
-# Initialize the Groq client
-client = Groq(api_key="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")
+                    
+                    Take into consideration your chat history which will be provided\
+                    to you before the user asks his question.
 
-# Function to extract key information using Groq AI
-async def extract_key_info(text):
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                'role': 'system',
-                'content': 'Act as a well-trained NER model. You are to extract the key features of the text I provide you. Do a very great job and return the information in a structured format.in a situation where a user upload a general file which is not anything related to NER, then summarize the key points'
-            },
-            {
-                "role": "user",
-                "content": text,
-            }
-        ],
-        model="llama3-8b-8192",
-    )
+                    Consider also this directive before giving an answer {prompt}
+
+                    REMEMBER:
+                        Be precise and concise
+
+                    Below is your chat history:
+                    {chat_history}
+                    
+                    The documents from which you will extract is provided below:
+                    {text}
+
+                    Below is the question the user wants you to answer:
+                    {query}
+                    '''
+
+
+    response = model.generate_content(full_prompt)
     
     # Get the raw text response
-    key_info = chat_completion.choices[0].message.content
-    return key_info
+    return response.text
 
 
-#Function to answer questions based on document
-async def question_answer(query: str, document: str, chat_history: List[str]):
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                'role': 'system',
-                'content': f'''Act as a well-trained question and answer model.\
-                You are to answer questions only from the text I provide you below.\
-                Do a very great job and return your answer in a structured format.\
-                In a situation where you cannot find an answer to the question based\
-                on the text, do not forge an answer.
-                
-                ```text```
-                {document}
+async def suggest_followups(text: str, chat_history: str):
+    full_prompt = f'''Act as a well-trained NER model.\
+                    You are to provide the info for all that the\
+                    user need. Dont start with introducing yourself,\
+                    go straight to the point. i will tip you\
+                    $500 when you do a really exceptional job.
+
+                    The user will provide you with one or more documents\
+                    based on the documents suggest 3 likely followup questions\
+                    the user may ask.\
+                            
+
+                    Below are the documents:\
+                    {text}
+                    
+                    Take also into consideration the chat history of the user\
+                    
+                    Below is the chat history:\
+                    {chat_history}
+
+                    Your output should be in this format.\
+                    Example:\
+                    ["What is the name of the person?", "How old is Martins?", "What is the total cost in the invoice?"]
                 '''
-            },
-        ] + chat_history + [{
-                "role": "user",
-                "content": query,
-            }],
-        model="llama3-8b-8192",
-    )
     
-    # Get the raw text response
-    response = chat_completion.choices[0].message.content
-    return response
+    
+
+    response = model.generate_content(full_prompt)
+    return response.text
+
+
+
+async def extract_all_key_info(text: str, category: str):
+    if category in prompts:
+        prompt = prompts[category]
+    else:
+        prompt = "You are a very good question and answer system\n"
+
+    full_prompt = f'''Act as a well-trained NER model.\
+                    You are to provide the info for all that the\
+                    user need. Dont start with introducing yourself,\
+                    go straight to the point. i will tip you\
+                    $500 when you do a really exceptional job.
+
+                    The user will provide you with one or more documents\
+                    Extract all the key information from the documents\
+                    document by document
+                            
+
+                    Below are the documents:\
+                    {text}
+                    
+                    Take into consideration this furthur directives before giving an output\
+                    
+                    Below is the further directives:\
+                    {prompt}
+
+                    Your output should be in this format.\
+                    [{"file1.pdf": "Key info extracted from file1.pdf"},\
+                    {"file2.pdf": "Key info extracted from file2.pdf"}]
+                '''
+    
+
+    response = model.generate_content(full_prompt)
+    return response.text
