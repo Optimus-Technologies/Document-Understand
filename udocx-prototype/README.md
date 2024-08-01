@@ -22,7 +22,9 @@ To set up the project, ensure you have the following prerequisites:
 Clone the repository:
 
 bash
-git clone https://github.com/yourusername/document-understanding-model.git
+
+git clone https://github.com/Optimus-Technologies/Document-Understand.git
+
 cd document-understanding-model
 
 Install the required packages:
