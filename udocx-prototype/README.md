@@ -25,7 +25,7 @@ bash
 
 git clone https://github.com/Optimus-Technologies/Document-Understand.git
 
-cd document-understanding-model
+cd udocx-prototype
 
 Install the required packages:
 
